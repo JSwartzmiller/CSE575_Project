@@ -155,7 +155,7 @@ def getGamesToday():
 
     return games
     
-#shows matchups for suer to select
+#shows matchups for user to select
 def displayMatchup(games):
     print("Today's Matchups:")
 
@@ -330,8 +330,7 @@ def getPlayerGames(playerURL):
 
     return df
 
-
-
+#function to save players game log for passed team name
 def gather_stats(user_team_name):
 
     #Example of what gets fetched
@@ -341,54 +340,52 @@ def gather_stats(user_team_name):
     #get injury table for specific team
     #print(getInjuryTable(teamPage))
 
-    #create a new directory to save scraped data
-
+    #go to folder where storing NBA data
     parent_directory = "./NBA_data"
     os.makedirs(parent_directory, exist_ok=True)
 
+    #create a place that stores team specific data
     team_directory = os.path.join(parent_directory, f"./{user_team_name}_data")  
-    os.makedirs(team_directory, exist_ok=True)  # Create the directory if it doesn't already exist
+    os.makedirs(team_directory, exist_ok=True)  
     
-    # Fetch the team stats and player links
+    #fetch team average stats along with dictionary for players url's
     playersAverageStatsDf, savedPlayerDictionary = getTeamStats(teamPage)
 
-    # Save the team stats to a CSV file
+    #Save the team stats to .csv file
     team_filename = os.path.join(team_directory, f"{user_team_name}_team_stats.csv")
     playersAverageStatsDf.to_csv(team_filename, index=False)
-    print(f"Team stats have been saved to '{team_filename}'.")
     
-    # List to store each player's game logs
+    #List to store data
     all_players_game_logs = []
 
-    # Convert the 'MP' column to numeric values (NaN for non-numeric values like 'DNP')
+    #Convert the minutes played column to numeric
     playersAverageStatsDf['MP'] = pd.to_numeric(playersAverageStatsDf['MP'], errors='coerce')
 
-    # Filter players who play more than 16 minutes per game
+    #filter out players by average minutes played with criteria being > 16 minutes played
     filtered_players = playersAverageStatsDf[playersAverageStatsDf['MP'] > 16]
 
-    # Iterate through every player on the filtered list and fetch game logs
+    #Iterate through the players on the list and fetch game logs
     for _, player_row in filtered_players.iterrows():
-        player = player_row['Player']  # Player name from the dataframe
-        player_url = savedPlayerDictionary[player]  # Get player URL from saved dictionary
+        player = player_row['Player']  
+        player_url = savedPlayerDictionary[player] 
 
         print(f"Fetching game logs for player: {player}")
         player_game_log_df = getPlayerGames(player_url)
 
+        #Add player name to the game log rows
         if player_game_log_df is not None:
-            # Add the player's name and team to the game log DataFrame
             player_game_log_df['Player'] = player
             all_players_game_logs.append(player_game_log_df)
 
-    # Concatenate all player game logs into one DataFrame
+    
     if all_players_game_logs:
+        #add all players to same data frame for all players game stats per team
         full_team_game_logs_df = pd.concat(all_players_game_logs, ignore_index=True)
 
-        # Save the concatenated DataFrame to a CSV file
+        #save dataframe as .csv file
         full_game_logs_filename = os.path.join(team_directory, f"{user_team_name}_players_game_logs.csv")
         full_team_game_logs_df.to_csv(full_game_logs_filename, index=False)
-        print(f"All player game logs for {user_team_name} have been saved to '{full_game_logs_filename}'.")
     else:
         print("No player game logs were fetched.")
-
 
 gather_stats("Washington")
